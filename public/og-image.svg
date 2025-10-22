@@ -1,0 +1,15 @@
+<!-- Placeholder SVG for OG Image -->
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ogGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0052ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0073ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogGradient)"/>
+  <circle cx="300" cy="315" r="80" fill="white"/>
+  <rect x="220" y="420" width="160" height="50" rx="25" fill="white"/>
+  <text x="700" y="280" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="54" font-weight="bold">Merch MVP</text>
+  <text x="700" y="330" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="28">Event SBT System on Base</text>
+  <text x="700" y="380" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24">Claim attendance SBTs • Mint premium NFTs</text>
+</svg>

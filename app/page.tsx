@@ -1,11 +1,21 @@
+'use client';
+
+import { useEffect } from 'react'
+import { sdk } from '@farcaster/miniapp-sdk'
 import ClientOnly from '../components/ClientOnly'
-import WalletConnection from '../components/WalletConnection'
+import MiniAppConnection from '../components/MiniAppConnection'
+import BaseAccountInfo from '../components/BaseAccountInfo'
 import ConditionalSetup from '../components/ConditionalSetup'
 import ClaimForm from '../components/ClaimForm'
 import UpgradeButton from '../components/UpgradeButton'
+import { MiniAppProvider } from '../hooks/useMiniApp'
 import styles from "./page.module.css";
 
 export default function Home() {
+  useEffect(() => {
+    // Hide the splash screen and display the app
+    sdk.actions.ready();
+  }, []);
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -21,26 +31,30 @@ export default function Home() {
           </p>
         </div>
 
-        <ClientOnly fallback={
-          <div style={{
-            border: '1px solid #ddd',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            marginBottom: '2rem',
-            backgroundColor: '#f9f9f9',
-            textAlign: 'center',
-            color: '#666'
-          }}>
-            Loading dApp...
-          </div>
-        }>
-          {/* Step 1: Wallet Connection */}
-          <div style={{ marginBottom: '2rem' }}>
-            <WalletConnection />
-          </div>
+        <MiniAppProvider>
+          <ClientOnly fallback={
+            <div style={{
+              border: '1px solid #ddd',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              marginBottom: '2rem',
+              backgroundColor: '#f9f9f9',
+              textAlign: 'center',
+              color: '#666'
+            }}>
+              Loading MiniApp...
+            </div>
+          }>
+            {/* Step 1: MiniApp Connection (replaces wallet connection) */}
+            <div style={{ marginBottom: '2rem' }}>
+              <MiniAppConnection />
+            </div>
 
-          {/* Step 1.5: Contract Setup (Solo si es necesario) */}
-          <ConditionalSetup />
+            {/* Step 1.2: Base Account Features */}
+            <BaseAccountInfo />
+
+            {/* Step 1.5: Contract Setup (Solo si es necesario) */}
+            <ConditionalSetup />
 
           {/* Step 2: Claim SBT */}
           <div style={{ marginBottom: '2rem' }}>
@@ -73,11 +87,12 @@ export default function Home() {
               <div style={{ marginBottom: '1rem' }}>
                 <strong>How to test:</strong>
                 <ol style={{ margin: '0.5rem 0 0 0', paddingLeft: '1.2rem' }}>
-                  <li>Connect your wallet and switch to Base Sepolia</li>
+                  <li>Open as Mini App in Base app or Farcaster client</li>
+                  <li>Your Base Account connects automatically</li>
                   <li>Use one of the test claim codes above</li>
                   <li>Enter any event name (generates unique eventId)</li>
-                  <li>Backend validates the code and generates signature</li>
-                  <li>Contract mints SBT using backend signature (any user can claim!)</li>
+                  <li>Backend validates code and generates signature</li>
+                  <li>Contract mints SBT using your Base Account (gasless!)</li>
                   <li>Try minting a companion Premium NFT (keeps your SBT)</li>
                 </ol>
               </div>
@@ -88,12 +103,13 @@ export default function Home() {
                 borderRadius: '6px',
                 border: '1px solid #ffeaa7'
               }}>
-                <strong>⚠️ Note:</strong> Code validation is currently mock data. Backend generates real signatures 
-                for contract minting. Premium NFTs are companions (your SBT is preserved).
+                <strong>🚀 Base MiniApp:</strong> Runs natively in Base ecosystem with automatic account connection.
+                Code validation is mock data. Backend generates real signatures. Gasless transactions available!
               </div>
             </div>
           </div>
         </ClientOnly>
+        </MiniAppProvider>
       </main>
     </div>
   );

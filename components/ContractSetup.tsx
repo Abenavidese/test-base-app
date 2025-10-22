@@ -34,7 +34,6 @@ export default function ContractSetup() {
   const [result, setResult] = useState<string | null>(null)
   const [currentIssuer, setCurrentIssuer] = useState<string>('')
   const [contractOwner, setContractOwner] = useState<string>('')
-  const [isConfigured, setIsConfigured] = useState<boolean>(false)
 
   // Tu address del backend issuer (desde los logs)
   const BACKEND_ISSUER_ADDRESS = '0x6388681e6A22F8Fc30e3150733795255D4250db1'
@@ -55,9 +54,7 @@ export default function ContractSetup() {
       }) as string
       setContractOwner(owner)
 
-      // Check if correctly configured
-      const configured = issuer.toLowerCase() === BACKEND_ISSUER_ADDRESS.toLowerCase()
-      setIsConfigured(configured)
+      // Check if correctly configured - currently unused but may be needed for future UI logic
     } catch (error) {
       console.error('Error checking issuer:', error)
     }
@@ -93,11 +90,11 @@ export default function ContractSetup() {
       setResult(`✅ Backend issuer set successfully! TX: ${hash}`)
       await checkCurrentIssuer() // Refresh current issuer
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error setting backend issuer:', error)
-      let errorMessage = error.message || 'Failed to set backend issuer'
+      let errorMessage = error instanceof Error ? error.message : 'Failed to set backend issuer'
       
-      if (error.message?.includes('Ownable: caller is not the owner')) {
+      if (errorMessage?.includes('Ownable: caller is not the owner')) {
         errorMessage = '❌ Only the contract owner can set the backend issuer'
       }
       
@@ -196,8 +193,8 @@ export default function ContractSetup() {
       }}>
         <strong>Instructions:</strong>
         <ol style={{ margin: '0.5rem 0 0 0', paddingLeft: '1.2rem' }}>
-          <li>Make sure you're connected as the contract owner</li>
-          <li>Click "Set Backend Issuer Address"</li>
+          <li>Make sure you&apos;re connected as the contract owner</li>
+          <li>Click &quot;Set Backend Issuer Address&quot;</li>
           <li>Once configured, the SBT minting should work</li>
           <li>You can hide this component after setup</li>
         </ol>

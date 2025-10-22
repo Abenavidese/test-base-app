@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useWallet } from '../hooks/useWallet'
+import { useMiniApp } from '../hooks/useMiniApp'
 import { 
   getUpgradeFee, 
   mintCompanion,
@@ -12,7 +12,19 @@ import {
 } from '../lib/contracts'
 
 export default function UpgradeButton() {
-  const { account, connected, isCorrectNetwork, ensureConnected } = useWallet()
+  const { user, isConnected, isInMiniApp } = useMiniApp()
+  const [account, setAccount] = useState<string | null>(null)
+  const connected = isConnected && !!account
+
+  // Get Base Account address
+  useEffect(() => {
+    if (isInMiniApp && isConnected && user) {
+      // For testing, use the backend issuer address
+      // TODO: Replace with actual Base Account integration
+      console.log('Using test address for Base Account')
+      setAccount('0x6388681e6A22F8Fc30e3150733795255D4250db1') // Backend issuer address for testing
+    }
+  }, [isInMiniApp, isConnected, user])
   
   const [formData, setFormData] = useState({
     sbtTokenId: '',
@@ -81,10 +93,11 @@ export default function UpgradeButton() {
       const sbtId = parseInt(formData.sbtTokenId.trim())
       const validation = await canMintCompanion(sbtId, account)
       setValidationResult(validation)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error checking eligibility'
       setValidationResult({ 
         canMint: false, 
-        reason: error.message || 'Error checking eligibility' 
+        reason: errorMessage
       })
     } finally {
       setChecking(false)
@@ -93,8 +106,8 @@ export default function UpgradeButton() {
 
   // Handle companion mint submission
   const handleMintCompanion = async () => {
-    if (!connected || !isCorrectNetwork) {
-      setResult({ success: false, error: 'Please connect wallet and switch to Base Sepolia' })
+    if (!connected) {
+      setResult({ success: false, error: 'Please connect your MiniApp' })
       return
     }
 
@@ -107,7 +120,6 @@ export default function UpgradeButton() {
     setResult(null)
 
     try {
-      await ensureConnected()
       
       const sbtId = parseInt(formData.sbtTokenId.trim())
       
@@ -132,11 +144,12 @@ export default function UpgradeButton() {
         setSbtBalance(newBalance)
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Companion mint error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mint companion NFT'
       setResult({ 
         success: false, 
-        error: error.message || 'Failed to mint companion NFT' 
+        error: errorMessage
       })
     } finally {
       setLoading(false)
@@ -216,7 +229,7 @@ export default function UpgradeButton() {
           }}
         />
         <small style={{ color: '#666' }}>
-          Event organizer's address (receives 62.5% of the mint fee)
+          Event organizer&apos;s address (receives 62.5% of the mint fee)
         </small>
       </div>
 
@@ -349,7 +362,7 @@ export default function UpgradeButton() {
               }}>
                 <strong>Common reasons for companion mint failure:</strong>
                 <ul style={{ margin: '0.25rem 0 0 0', paddingLeft: '1.2rem' }}>
-                  <li>You don't own this SBT token ID</li>
+                  <li>You don&apos;t own this SBT token ID</li>
                   <li>SBT was already used for companion minting</li>
                   <li>Insufficient ETH sent for mint fee</li>
                   <li>Contract is paused by owner</li>
@@ -365,15 +378,15 @@ export default function UpgradeButton() {
       <div style={{ marginBottom: '1rem' }}>
         <button
           onClick={handleMintCompanion}
-          disabled={loading || !connected || !isCorrectNetwork || !isFormValid()}
+          disabled={loading || !connected || !isFormValid()}
           style={{
             backgroundColor: '#28a745',
             color: 'white',
             border: 'none',
             padding: '0.75rem 1.5rem',
             borderRadius: '8px',
-            cursor: (loading || !connected || !isCorrectNetwork || !isFormValid()) ? 'not-allowed' : 'pointer',
-            opacity: (loading || !connected || !isCorrectNetwork || !isFormValid()) ? 0.5 : 1,
+            cursor: (loading || !connected || !isFormValid()) ? 'not-allowed' : 'pointer',
+            opacity: (loading || !connected || !isFormValid()) ? 0.5 : 1,
             fontWeight: 'bold',
             fontSize: '1rem',
             width: '100%'
@@ -392,10 +405,10 @@ export default function UpgradeButton() {
         <strong>New Companion Flow:</strong>
         <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '1.2rem' }}>
           <li>Your original SBT remains in your wallet (NOT burned)</li>
-          <li>You'll receive a new tradable Premium Companion NFT (ERC-721)</li>
+          <li>You&apos;ll receive a new tradable Premium Companion NFT (ERC-721)</li>
           <li>The mint fee is split between treasury and organizer</li>
           <li>Each SBT can only be used once for companion minting</li>
-          <li>You'll own both the SBT proof AND the tradable premium NFT</li>
+          <li>You&apos;ll own both the SBT proof AND the tradable premium NFT</li>
         </ul>
       </div>
     </div>

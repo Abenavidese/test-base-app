@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useWallet } from '../hooks/useWallet'
+import { useState, useEffect, useCallback } from 'react'
+import { useMiniApp } from '../hooks/useMiniApp'
+import { sdk } from '@farcaster/miniapp-sdk'
 import { 
   claimSBTWithCode,
   getSBTBalance,
@@ -9,7 +10,34 @@ import {
 } from '../lib/contracts'
 
 export default function ClaimForm() {
-  const { account, connected, isCorrectNetwork, ensureConnected } = useWallet()
+  const { user, isConnected, isInMiniApp } = useMiniApp()
+  const [account, setAccount] = useState<string | null>(null)
+  const connected = isConnected && !!account
+
+  // Get Base Account address
+  useEffect(() => {
+    const getBaseAccount = async () => {
+      if (isInMiniApp && isConnected && user) {
+        try {
+          // Get the Base Account from Farcaster MiniApp context
+          const context = await sdk.context
+          console.log('MiniApp Context:', context)
+          
+          // For testing, use the backend issuer address
+          // TODO: Replace with actual Base Account integration
+          console.log('Using test address for Base Account')
+          setAccount('0x6388681e6A22F8Fc30e3150733795255D4250db1') // Backend issuer address for testing
+          
+        } catch (error) {
+          console.error('Error getting Base Account:', error)
+          // Fallback to test address
+          setAccount('0x6388681e6A22F8Fc30e3150733795255D4250db1')
+        }
+      }
+    }
+    
+    getBaseAccount()
+  }, [isInMiniApp, isConnected, user])
   
   const [formData, setFormData] = useState({
     claimCode: ''
@@ -20,12 +48,12 @@ export default function ClaimForm() {
   const [sbtBalance, setSbtBalance] = useState<number>(0)
 
   // Get user's SBT balance
-  const updateSBTBalance = async () => {
+  const updateSBTBalance = useCallback(async () => {
     if (account) {
       const balance = await getSBTBalance(account)
       setSbtBalance(balance)
     }
-  }
+  }, [account])
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,8 +69,8 @@ export default function ClaimForm() {
 
   // Handle claim submission
   const handleClaim = async () => {
-    if (!connected || !isCorrectNetwork) {
-      setResult({ success: false, error: 'Please connect wallet and switch to Base Sepolia' })
+    if (!connected) {
+      setResult({ success: false, error: 'Please connect your MiniApp' })
       return
     }
 
@@ -55,12 +83,11 @@ export default function ClaimForm() {
     setResult(null)
 
     try {
-      await ensureConnected()
-      
       // Use the complete claim flow (validate + sign + mint)
       const claimResult = await claimSBTWithCode(
         formData.claimCode.trim(),
-        account!
+        account!,
+        isInMiniApp
       )
       
       setResult(claimResult)
@@ -70,11 +97,12 @@ export default function ClaimForm() {
         await updateSBTBalance()
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Claim error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process claim'
       setResult({ 
         success: false, 
-        error: error.message || 'Failed to process claim' 
+        error: errorMessage
       })
     } finally {
       setLoading(false)
@@ -86,7 +114,7 @@ export default function ClaimForm() {
     if (connected && account) {
       updateSBTBalance()
     }
-  }, [connected, account])
+  }, [connected, account, updateSBTBalance])
 
   return (
     <div style={{
@@ -225,15 +253,15 @@ export default function ClaimForm() {
       <div style={{ marginBottom: '1rem' }}>
         <button
           onClick={handleClaim}
-          disabled={loading || !connected || !isCorrectNetwork || !isFormValid()}
+          disabled={loading || !connected || !isFormValid()}
           style={{
             backgroundColor: '#007cff',
             color: 'white',
             border: 'none',
             padding: '0.75rem 1.5rem',
             borderRadius: '8px',
-            cursor: (loading || !connected || !isCorrectNetwork || !isFormValid()) ? 'not-allowed' : 'pointer',
-            opacity: (loading || !connected || !isCorrectNetwork || !isFormValid()) ? 0.5 : 1,
+            cursor: (loading || !connected || !isFormValid()) ? 'not-allowed' : 'pointer',
+            opacity: (loading || !connected || !isFormValid()) ? 0.5 : 1,
             fontWeight: 'bold',
             width: '100%'
           }}

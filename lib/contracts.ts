@@ -33,6 +33,29 @@ export const getWalletClient = () => {
   return null
 }
 
+// MiniApp wallet client - uses Base Account provider
+export const getMiniAppWalletClient = async () => {
+  try {
+    // For Base MiniApps, we need to get the Base Account provider
+    if (typeof window !== 'undefined' && window.ethereum) {
+      // Use window.ethereum as provider
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' })
+        return createWalletClient({
+          chain: baseSepolia,
+          transport: custom(window.ethereum)
+        })
+      } catch (error) {
+        console.error('Failed to request accounts:', error)
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('Error getting MiniApp wallet client:', error)
+    return null
+  }
+}
+
 // BasicMerch ABI - New signature-based minting
 export const BASIC_MERCH_ABI = [
   {
@@ -321,10 +344,18 @@ export async function mintSBT(
   eventId: number,
   tokenURI: string,
   signature: string,
-  account: string
+  account: string,
+  isMiniApp: boolean = false
 ): Promise<ClaimResult> {
   try {
-    const walletClient = getWalletClient()
+    let walletClient
+    
+    if (isMiniApp) {
+      walletClient = await getMiniAppWalletClient()
+    } else {
+      walletClient = getWalletClient()
+    }
+    
     if (!walletClient) {
       throw new Error('Wallet client not available')
     }
@@ -348,7 +379,7 @@ export async function mintSBT(
         if (log.topics[0] && log.topics[2]) {
           tokenId = Number(log.topics[2])
         }
-      } catch (e) {
+      } catch {
         // Continue if parsing fails
       }
     }
@@ -358,25 +389,25 @@ export async function mintSBT(
       txHash: hash,
       tokenId,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error minting SBT:', error)
     
-    let errorMessage = error.message || 'Failed to mint SBT'
+    let errorMessage = error instanceof Error ? error.message : 'Failed to mint SBT'
     
-    if (error.message?.includes('InvalidSignature')) {
+    if (errorMessage?.includes('InvalidSignature')) {
       errorMessage = 'Invalid signature from backend'
-    } else if (error.message?.includes('DuplicateEventMint')) {
+    } else if (errorMessage?.includes('DuplicateEventMint')) {
       errorMessage = 'Already minted SBT for this event'
-    } else if (error.message?.includes('user rejected')) {
+    } else if (errorMessage?.includes('user rejected')) {
       errorMessage = 'Transaction rejected by user'
-    } else if (error.message?.includes('insufficient funds')) {
-      errorMessage = 'Insufficient ETH for gas'
+    } else if (errorMessage?.includes('insufficient funds')) {
+      errorMessage = 'Insufficient funds for transaction'
     }
 
     return {
       success: false,
       error: errorMessage,
-      txHash: error.receipt?.transactionHash || undefined
+      txHash: undefined
     }
   }
 }
@@ -463,7 +494,7 @@ export async function mintCompanion(
         if (log.topics[0] && log.topics[2]) {
           premiumTokenId = Number(log.topics[2])
         }
-      } catch (e) {
+      } catch {
         // Continue if parsing fails
       }
     }
@@ -474,27 +505,27 @@ export async function mintCompanion(
       premiumTokenId,
       fee: formatEther(fee),
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error minting companion:', error)
     
-    let errorMessage = error.message || 'Failed to mint companion'
+    let errorMessage = error instanceof Error ? error.message : 'Failed to mint companion'
     
-    if (error.message?.includes('SBTNotOwned')) {
+    if (errorMessage?.includes('SBTNotOwned')) {
       errorMessage = 'You do not own this SBT token'
-    } else if (error.message?.includes('SBTAlreadyUpgraded')) {
+    } else if (errorMessage?.includes('SBTAlreadyUpgraded')) {
       errorMessage = 'This SBT has already been used for companion minting'
-    } else if (error.message?.includes('InsufficientFee')) {
+    } else if (errorMessage?.includes('InsufficientFee')) {
       errorMessage = 'Insufficient fee provided'
-    } else if (error.message?.includes('user rejected')) {
+    } else if (errorMessage?.includes('user rejected')) {
       errorMessage = 'Transaction rejected by user'
-    } else if (error.message?.includes('insufficient funds')) {
+    } else if (errorMessage?.includes('insufficient funds')) {
       errorMessage = 'Insufficient ETH balance'
     }
 
     return {
       success: false,
       error: errorMessage,
-      txHash: error.receipt?.transactionHash || undefined
+      txHash: undefined
     }
   }
 }
@@ -502,7 +533,8 @@ export async function mintCompanion(
 // Complete claim flow with code validation + signature + mint
 export async function claimSBTWithCode(
   code: string,
-  userAddress: string
+  userAddress: string,
+  isMiniApp: boolean = false
 ): Promise<ClaimResult> {
   try {
     // 1. Validate code
@@ -535,16 +567,18 @@ export async function claimSBTWithCode(
       validation.eventId,
       validation.tokenURI,
       signatureData.signature,
-      userAddress
+      userAddress,
+      isMiniApp
     )
 
     return mintResult
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in complete claim flow:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to complete claim'
     return {
       success: false,
-      error: error.message || 'Failed to complete claim'
+      error: errorMessage
     }
   }
 }
